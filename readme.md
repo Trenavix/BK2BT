@@ -12,7 +12,7 @@ Renderer Screenshots:
 
 ![RBBPreview](http://bin.smwcentral.net/u/15445/BK2BTPreview.png)
 ![SpiralMountain](https://cdn.discordapp.com/attachments/251860357952307201/376856285011771392/unknown.png)
-![BoB](https://cdn.discordapp.com/attachments/251860357952307201/377487263094800404/unknown.png)
+![BoB](http://bin.smwcentral.net/u/15445/BoBPreview.png)
 
 In-Game Screenshots (Tooie):
 
