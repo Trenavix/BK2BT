@@ -1,9 +1,21 @@
-﻿using System;
+﻿/****************************************************************************
+*                                                                           *
+* BK2BT - An N64 Graphics Microcode Converter                               *
+* https://www.YouTube.com/Trenavix/                                         *
+* Copyright (C) 2017 Trenavix. All rights reserved.                         *
+*                                                                           *
+* License:                                                                  *
+* GNU/GPLv2 http://www.gnu.org/licenses/gpl-2.0.html                        *
+*                                                                           *
+****************************************************************************/
+
+using System;
 using System.IO;
 
 public class BinManager
 {
     public static BTBinFile MainBin;
+    public static BTBinFile AlphaBin;
 
     public static void LoadBIN(String BinDirectory)
     {
@@ -15,20 +27,41 @@ public class BinManager
             MainBin = NewBTBin;
             fs.Close();
         }
+        Textures.InitialiseTextures(MainBin, 0);
     }
 
-    public static void ConvertBKtoBT()
+    public static void LoadAlphaBIN(String AlphaBinDirectory)
     {
-        F3DEXtoF3DEX2();
-        TextureHeaderBK2BT();
-        useCommonVertexHeader();
-        newGeoLayout();//MUST BE LAST, space allocation
+        using (FileStream fs = new FileStream(AlphaBinDirectory, FileMode.Open, FileAccess.Read))
+        {
+            byte[] binFile = new byte[fs.Length];
+            fs.Read(binFile, 0, (int)fs.Length);
+            BTBinFile NewBTBin = new BTBinFile(binFile);
+            AlphaBin = NewBTBin;
+            fs.Close();
+        }
+        Textures.InitialiseTextures(AlphaBin, 1);
     }
 
-    public static void F3DEXtoF3DEX2()
+    public static void ConvertBKtoBT(BTBinFile Bin)
     {
-        int CommandsLength = MainBin.F3DCommandsLength();
-        Int32 F3DSetupAddr = MainBin.ReadFourBytes(0x0C);
+        F3DEXtoF3DEX2(Bin);
+        TextureHeaderBK2BT(Bin);
+        useCommonVertexHeader(Bin);
+        newGeoLayout(Bin);
+        updateCollision(Bin);
+    }
+
+    public static void ConvertBTtoBK(BTBinFile Bin)
+    {
+        if (Bin.getTextureSetupAddr() == 0x38) return; //Already BK Bin
+        //TODO
+    }
+
+    public static void F3DEXtoF3DEX2(BTBinFile Bin)
+    {
+        int CommandsLength = Bin.F3DCommandsLength();
+        Int32 F3DSetupAddr = Bin.ReadFourBytes(0x0C);
         byte[][] DisplayList = new byte[CommandsLength][];
         int newCommandAddr = F3DSetupAddr+0x08;
         //Copy DL into 2D Byte array with double loop 
@@ -37,7 +70,7 @@ public class BinManager
             DisplayList[i] = new byte[8];
             for (int j = 0; j < 8; j++)
             {
-                DisplayList[i][j] = MainBin.getByte(newCommandAddr+(i*8)+j);
+                DisplayList[i][j] = Bin.getByte(newCommandAddr+(i*8)+j);
             }
         }
         //change or convert commands
@@ -62,13 +95,14 @@ public class BinManager
                     numvert = (short)(numvert * 2);
                     DisplayList[i][3] = (byte)(numvert);
 
-                    if (firstVTX) { firstVTX = false; previousVTX = i; break; }
+                    //Fix Banjo's Backpack's overloaded 04 commands below, but it breaks conversions from original bins!
+                    /*if (firstVTX) { firstVTX = false; previousVTX = i; break; }
                     byte MaxVertNum = (byte)((MaxVertIndex / 2) + 1);
                     DisplayList[previousVTX][1] = (byte)(MaxVertNum >> 4);
                     DisplayList[previousVTX][2] = (byte)(MaxVertNum << 4);
                     DisplayList[previousVTX][3] = (byte)(MaxVertIndex+2);
                     MaxVertIndex = 0x00;
-                    previousVTX = i;
+                    previousVTX = i;*/
                     break;
                 case 0x06:
                     DisplayList[i][0] = 0xDE;
@@ -92,13 +126,19 @@ public class BinManager
                     break;
                 case 0xB6:
                     DisplayList[i][0] = 0xD9;
-                    if (DisplayList[i+1][5] == 0x08 && DisplayList[i+1][6] == 0x22 && DisplayList[i+1][7] == 0x04) //VertRGBABackCull, i+1 for SETGEO
+                    if (DisplayList[i + 1][5] == 0x08 && DisplayList[i + 1][6] == 0x22 && DisplayList[i + 1][7] == 0x04) //VertRGBABackCull, i+1 for SETGEO
                     {
-                    DisplayList[i][1] = 0xC0;
-                    DisplayList[i][2] = 0xFF;
-                    DisplayList[i][3] = 0xFB;
+                        DisplayList[i][1] = 0xC0;
+                        DisplayList[i][2] = 0xFF;
+                        DisplayList[i][3] = 0xFB;
                     }
-                    else if (DisplayList[i+1][5] == 0x08 && DisplayList[i+1][6] == 0x02 && DisplayList[i+1][7] == 0x04) //VertRGBANoCull, i+1 for SETGEO
+                    else if (DisplayList[i + 1][5] == 0x08 && DisplayList[i + 1][6] == 0x02 && DisplayList[i + 1][7] == 0x04) //VertRGBANoCull, i+1 for SETGEO
+                    {
+                        DisplayList[i][1] = 0xC0;
+                        DisplayList[i][2] = 0xF9;
+                        DisplayList[i][3] = 0xFB;
+                    }
+                    else
                     {
                         DisplayList[i][1] = 0xC0;
                         DisplayList[i][2] = 0xF9;
@@ -113,6 +153,8 @@ public class BinManager
                     DisplayList[i][1] = 0xFF; //NOP Set for now
                     DisplayList[i][2] = 0xFF;
                     DisplayList[i][3] = 0xFF;
+                    if (DisplayList[i][5] == 0x06) DisplayList[i][5] = 0x26;
+                    else DisplayList[i][5] = 0x20;
                     DisplayList[i][5] = 0x20; //VertRGBA only for now (later env mapping flag)
                     DisplayList[i][6] = 0x00;
                     DisplayList[i][7] = 0x04;
@@ -125,6 +167,7 @@ public class BinManager
                     break;
                 case 0xBB:
                     DisplayList[i][0] = 0xD7;
+                    if (DisplayList[i][3] == 0x01) { DisplayList[i][3] = 0x02; }
                     break;
                 case 0xBC:
                     DisplayList[i][0] = 0xDB;
@@ -160,7 +203,7 @@ public class BinManager
         {
             for (int j = 0; j < 8; j++)
             {
-                MainBin.changeByte((newCommandAddr + (i * 8) + j), DisplayList[i][j]);
+                Bin.changeByte((newCommandAddr + (i * 8) + j), DisplayList[i][j]);
             }
         }
     }
@@ -177,50 +220,63 @@ public class BinManager
     }
 
 
-    public static void TextureHeaderBK2BT()
+    public static void TextureHeaderBK2BT(BTBinFile Bin)
     {
         
-        Int16 SetupAddr = MainBin.getTextureSetupAddr();
-        MainBin.copyBytes(SetupAddr, 0x50, MainBin.endBinAddr()-SetupAddr); //Shift bin file so TexSetup is at 0x50
-        MainBin.WriteTwoBytes(0x08, 0x0050);
-        for (int i = 0; i < 4; i++) { MainBin.WriteEightBytes(SetupAddr-8 + (i * 8), 0); } //fill ext texture addr with 0
-        SetupAddr = MainBin.getTextureSetupAddr();
-        if (MainBin.getByte(SetupAddr+0x06) == 01) { return; } //External texture flag
-        Int16 numTextures = MainBin.ReadTwoBytes(SetupAddr + 4);
+        Int16 SetupAddr = Bin.getTextureSetupAddr();
+        Bin.copyBytes(SetupAddr, 0x50, Bin.endBinAddr()-SetupAddr); //Shift bin file so TexSetup is at 0x50
+        Bin.WriteTwoBytes(0x08, 0x0050);
+        Int32 TriVertCount = Bin.ReadFourBytes(0x30); //Keep TriCount & VertCount
+        for (int i = 0; i < 4; i++) { Bin.WriteEightBytes(SetupAddr-8 + (i * 8), 0); } //fill ext texture addr with 0
+        Bin.WriteFourBytes(0x44, TriVertCount); //Place the Tri/Vert counts back in
+        SetupAddr = Bin.getTextureSetupAddr();
+        if (Bin.getByte(SetupAddr+0x06) == 01) { return; } //External texture flag
+        Int16 numTextures = Bin.ReadTwoBytes(SetupAddr + 4);
         int BKCommandBeginAddr = SetupAddr+8;
         int BTCommandBeginAddr = SetupAddr + 8;
-        for (int i = 0; i < numTextures; i++) //copy 128bit commands into 64bit commands
+        for (int i = 0; i < numTextures; i++) //convert 128bit commands into 64bit commands
         {
-            MainBin.copyBytes(BKCommandBeginAddr, BTCommandBeginAddr, 6);//TexAddr & Type
-            MainBin.copyBytes(BKCommandBeginAddr+8, BTCommandBeginAddr+6, 2);//XX and YY grid
+            Bin.copyBytes(BKCommandBeginAddr, BTCommandBeginAddr, 6);//TexAddr & Type
+            Bin.copyBytes(BKCommandBeginAddr+8, BTCommandBeginAddr+6, 2);//XX and YY grid
             BTCommandBeginAddr += 0x08;
             BKCommandBeginAddr += 0x10;
         }
-        MainBin.copyBytes(BKCommandBeginAddr, BTCommandBeginAddr, MainBin.endBinAddr()-BKCommandBeginAddr);//shift all data back
-        MainBin.changeEndBinAddr(MainBin.endBinAddr() - (numTextures * 8));//remove data at end after backshift
+        Bin.copyBytes(BKCommandBeginAddr, BTCommandBeginAddr, Bin.endBinAddr()-BKCommandBeginAddr);//shift all data back
+        Bin.changeEndBinAddr(Bin.endBinAddr() - (numTextures * 8));//remove data at end after backshift
         int AddressesShift = (0x18 - (numTextures * 8));
-        Int32 TexLoadBytes = MainBin.ReadFourBytes(0x50)-(numTextures*8);
-        Int32 NewGeoAddr = MainBin.ReadFourBytes(0x04) + AddressesShift;//declare new addresses after shift
-        Int32 NewF3DEX2Addr = MainBin.ReadFourBytes(0x0C) + AddressesShift;
-        Int32 NewVertAddr = MainBin.ReadFourBytes(0x10) + AddressesShift;
-        Int32 NewCollisionAddr = MainBin.ReadFourBytes(0x1C) + AddressesShift;
-        MainBin.WriteFourBytes(0x50, TexLoadBytes);
-        MainBin.WriteFourBytes(0x04, NewGeoAddr);
-        MainBin.WriteFourBytes(0x0C, NewF3DEX2Addr);
-        MainBin.WriteFourBytes(0x10, NewVertAddr);
-        MainBin.WriteFourBytes(0x1C, NewCollisionAddr);
-        MainBin.changeByte(0x0B, 0x00);
+        Int32 TexLoadBytes = Bin.ReadFourBytes(0x50)-(numTextures*8);
+        Int32 NewGeoAddr = Bin.ReadFourBytes(0x04) + AddressesShift;//declare new addresses after shift
+        Int32 NewF3DEX2Addr = Bin.ReadFourBytes(0x0C) + AddressesShift;
+        Int32 NewVertAddr = Bin.ReadFourBytes(0x10) + AddressesShift;
+        Int32 NewCollisionAddr = Bin.ReadFourBytes(0x1C) + AddressesShift;
+        Int32 NewFXSetupAddr = Bin.ReadFourBytes(0x24);
+        Int32 NewFXSetupEndAddr = Bin.ReadFourBytes(0x20);
+        if (NewFXSetupAddr != 0) NewFXSetupAddr += AddressesShift;
+        if (NewFXSetupEndAddr != 0) NewFXSetupEndAddr += AddressesShift;
+        Bin.WriteFourBytes(0x50, TexLoadBytes);
+        Bin.WriteFourBytes(0x04, NewGeoAddr);
+        Bin.WriteFourBytes(0x0C, NewF3DEX2Addr);
+        Bin.WriteFourBytes(0x10, NewVertAddr);
+        Bin.WriteFourBytes(0x1C, NewCollisionAddr);
+        Bin.WriteFourBytes(0x20, NewFXSetupEndAddr);
+        Bin.WriteFourBytes(0x24, NewFXSetupAddr);
+        //Bin.changeByte(0x0B, 0x00); THIS IS A TYPE, 2 for mipmapping may be necessary. 04 for env mapping. So far all match between BK/BT
     }
-    public static void newGeoLayout()
+    public static void newGeoLayout(BTBinFile Bin)
     {
-        int GeoAddress = MainBin.ReadFourBytes(0x04);
-        MainBin.writeByteArray(GeoAddress, BTGeoLayout());
-        MainBin.changeEndBinAddr(GeoAddress+0x1C);
+        int GeoAddress = Bin.ReadFourBytes(0x04);
+        Bin.writeByteArray(GeoAddress, BTGeoLayout());
+        Bin.changeEndBinAddr(GeoAddress+0x1C);
     }
-    public static void useCommonVertexHeader()
+    public static void useCommonVertexHeader(BTBinFile Bin)
     {
-        Int32 VertexSetupAddr = MainBin.ReadFourBytes(0x10);
-        MainBin.writeByteArray(VertexSetupAddr, BTVertexHeader());
+        Int32 VertexSetupAddr = Bin.ReadFourBytes(0x10);
+        Bin.writeByteArray(VertexSetupAddr, BTVertexHeader(Bin));
+    }
+
+    public static void updateCollision(BTBinFile Bin)
+    {
+        //TODO
     }
 
     private enum CMD
@@ -281,10 +337,10 @@ public class BinManager
         return geolayout;
     }
 
-    public static byte[] BTVertexHeader()
+    public static byte[] BTVertexHeader(BTBinFile Bin)
     {
-        int VertexStartAddr = MainBin.ReadFourBytes(0x10) + 0x18;
-        Int16 numVerts = ((Int16)((MainBin.ReadFourBytes(0x1C) - VertexStartAddr)/0x10));
+        int VertexStartAddr = Bin.ReadFourBytes(0x10) + 0x18;
+        Int16 numVerts = ((Int16)((Bin.ReadFourBytes(0x1C) - VertexStartAddr)/0x10));
         byte numVertsByte1;
         byte numVertsByte2;
         FromShortToByte(numVerts, out numVertsByte1, out numVertsByte2);
@@ -293,7 +349,7 @@ public class BinManager
         geolayout[4] = 0xC1; geolayout[5] = 0x40; geolayout[6] = 0x3E; geolayout[7] = 0x01;
         geolayout[8] = 0x37; geolayout[9] = 0x58; geolayout[0x0a] = 0x3D; geolayout[0x0b] = 0x2A;
         geolayout[0x0c] = 0xFD; geolayout[0x0d] = 0x24; geolayout[0x0e] = 0x12; geolayout[0x0f] = 0x83;
-        geolayout[0x10] = 0xFF; geolayout[0x11] = 0x35; geolayout[0x12] = 0x53; geolayout[0x13] = 0x9B;
+        geolayout[0x10] = 0xFF; geolayout[0x11] = 0x35; geolayout[0x12] = 0xA0; geolayout[0x13] = 0xC0;
         geolayout[0x14] = 0xA0; geolayout[0x15] = 0xC0; geolayout[0x16] = numVertsByte1; geolayout[0x17] = numVertsByte2;
         return geolayout;
     }

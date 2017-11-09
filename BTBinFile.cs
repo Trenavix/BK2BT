@@ -1,19 +1,35 @@
-﻿using System;
+﻿/****************************************************************************
+*                                                                           *
+* BK2BT - An N64 Graphics Microcode Converter                               *
+* https://www.YouTube.com/Trenavix/                                         *
+* Copyright (C) 2017 Trenavix. All rights reserved.                         *
+*                                                                           *
+* License:                                                                  *
+* GNU/GPLv2 http://www.gnu.org/licenses/gpl-2.0.html                        *
+*                                                                           *
+****************************************************************************/
+
+using System;
 using System.IO;
 
 public class BTBinFile
 {
-    private static byte[] CurrentBin;
+    private byte[] CurrentBin;
 
 	public BTBinFile(byte[] newBin)
 	{
-        CurrentBin = newBin;
+       this.CurrentBin = newBin;
     }
 
     public Int32 getF3DEX2SetupAddr()
     {
         return ReadFourBytes(0x0C);
     }
+    public Int32 getDLAddr()
+    {
+        return ReadFourBytes(0x0C)+0x08;
+    }
+
     public void updateF3DEX2SetupAddr(Int32 newAddr)
     {
         WriteFourBytes(getF3DEX2SetupAddr(), newAddr);
@@ -22,7 +38,47 @@ public class BTBinFile
     {
         return ReadTwoBytes(0x08);
     }
+    public Int16 getTextureCount()
+    {
+        return ReadTwoBytes(getTextureSetupAddr()+0x04);
+    }
+    public int getTextureDataAddr()
+    {
+        return getTextureSetupAddr() + 0x8+(getTextureCount() * 0x10);
+    }
 
+
+    public Int32 getVTXSetupAddr()
+    {
+        return ReadFourBytes(0x10);
+    }
+    public Int32 getCollisionSetupAddr()
+    {
+        return ReadFourBytes(0x1C);
+    }
+    public Int16 getVertexCount()
+    {
+        return (Int16)((getCollisionSetupAddr() - (getVTXSetupAddr() + 0x18))/0x10);
+    }
+
+    public byte[][] getVTXArray()
+    {
+        byte[][] array = new byte[getVertexCount()][];
+        for (int i = 0; i < array.Length; i++)
+        {
+            array[i] = new byte[16];
+            for (int j = 0; j < 16; j++)
+            {
+                array[i][j] = getByte(getVTXSetupAddr() + 0x18+(0x10*i)+j);
+            }
+        }
+        return array;
+    }
+
+    public Int32 getVTXAddr()
+    {
+        return ReadFourBytes(0x10)+0x18;
+    }
 
     public int F3DCommandsLength()
     {
@@ -56,6 +112,10 @@ public class BTBinFile
             value = (Int16)((value << 8) | CurrentBin[i]);
         }
         return value;
+    }
+    public Int16 ReadTwoSignedBytes(int offset)
+    {
+        return (Int16)((getByte(offset + 1) << 8) | getByte(offset));
     }
     public Int32 ReadFourBytes(int offset)
     {
@@ -123,6 +183,15 @@ public class BTBinFile
         {
             changeByte(destAddr+i, tempbuffer[i]);
         }
+    }
+    public byte[] copyBytestoArray(int srcAddr, int size)
+    {
+        byte[] newarray = new byte[size];
+        for (int i = 0; i < size; i++)
+        {
+            newarray[i] = CurrentBin[srcAddr + i];
+        }
+        return newarray;
     }
     public void writeByteArray(int offset, byte[] array)
     {

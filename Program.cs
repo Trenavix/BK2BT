@@ -1,4 +1,15 @@
-﻿using System;
+﻿/****************************************************************************
+*                                                                           *
+* BK2BT - An N64 Graphics Microcode Converter                               *
+* https://www.YouTube.com/Trenavix/                                         *
+* Copyright (C) 2017 Trenavix. All rights reserved.                         *
+*                                                                           *
+* License:                                                                  *
+* GNU/GPLv2 http://www.gnu.org/licenses/gpl-2.0.html                        *
+*                                                                           *
+****************************************************************************/
+
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
