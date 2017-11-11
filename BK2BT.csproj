@@ -109,6 +109,7 @@
     <Compile Include="BTBinFile.cs" />
     <Compile Include="BinManager.cs" />
     <Compile Include="F3DEXParser.cs" />
+    <Compile Include="Functions.cs" />
     <Compile Include="Renderer.cs" />
     <Compile Include="Form1.cs">
       <SubType>Form</SubType>

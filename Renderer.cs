@@ -27,8 +27,8 @@ class Renderer
 
     public static Camera cam = new Camera();
     public static Vector2 lastMousePos = new Vector2();
-    public static short TriCount = 0;
-    public static short VertexCount = 0;
+    public static uint TriCount = 0;
+    public static uint VertexCount = 0;
 
     public static void InitialiseView()
     {

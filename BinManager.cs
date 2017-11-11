@@ -277,6 +277,12 @@ public class BinManager
     public static void updateCollision(BTBinFile Bin)
     {
         //TODO
+        int CollisionAddr = Bin.getCollisionSetupAddr();
+        int CollisionSize = Bin.getGeoAddr() - CollisionAddr;
+        for (int i = CollisionAddr; i < CollisionAddr + CollisionSize; i += 4)
+        {
+            if (Bin.getByte(i) == 0x88) Bin.changeByte(i, 0x41);//Update common group header with one that allows HQ Shadow and ambient lighting
+        }
     }
 
     private enum CMD

@@ -70,7 +70,7 @@ public class F3DEX
                     {
                         GVTXArray[bufferIndex + j] = Vertex.getVertex(VTXStart+(j*0x10), BinFile);
                     }
-                    Renderer.VertexCount += numVerts;
+                    Renderer.VertexCount += (uint)numVerts;
                     break;
                 case 0x06:
                     break;
@@ -111,8 +111,8 @@ public class F3DEX
                 case 0xBA:
                     break;
                 case 0xBB:
-                    Textures.S_Scale *= 65536f/(float)(CMD[4] * 0x100 + CMD[5]); //0x10000/
-                    Textures.T_Scale *= 65536f / (float)(CMD[6] * 0x100 + CMD[7]) ;
+                    Textures.S_Scale *= 0x10000/(float)(CMD[4] * 0x100 + CMD[5]); //0x10000/
+                    Textures.T_Scale *= 0x10000 / (float)(CMD[6] * 0x100 + CMD[7]) ;
                     if (CMD[3] == 0x01 && Renderer.TextureEnabler) { GL.Enable(EnableCap.Texture2D); }
                     else
                     {
@@ -201,11 +201,11 @@ public class F3DEX
                 case 0xF5:
                     Textures.MODE = (byte)(CMD[1] >> 5);
                     Textures.BitSize = (byte)(4 * Math.Pow(2, ((CMD[1] >> 3) & 3)));
-                    Textures.TFlags = (CMD[5] >> 2) & 7;
-                    Textures.SFlags = CMD[6] & 7;
+                    Textures.TFlags = (CMD[5] >> 2) & 3;
+                    Textures.SFlags = CMD[6] & 3;
                     int WidthBits = (((CMD[1] & 3) << 7) + CMD[2] >> 1)*64;
                     if (CMD[4] != 0 || !Textures.FirstTexLoad[BinNum]) break;
-                    int HeightPower = ((CMD[5] & 7) << 2) | (CMD[6] >> 6);
+                    int HeightPower = ((CMD[5] & 3) << 2) | (CMD[6] >> 6);
                     int WidthPower = (CMD[7] >> 4);
                     Textures.Width = (int)Math.Pow(2, WidthPower);//(int)Math.Pow(2, WidthPower);
                     Textures.Height = (int)Math.Pow(2, HeightPower);

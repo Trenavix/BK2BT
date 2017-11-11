@@ -125,6 +125,7 @@ namespace BK2BT
                         BinManager.ConvertBKtoBT(BinManager.MainBin);
                         File.WriteAllBytes(saveBin.FileName, BinManager.MainBin.getCurrentBin());
                         ReloadMainBin(); //BK was converted to BT, must convert back or renderer can't read it!
+                        if (BinManager.AlphaBin != null) ReloadAlphaBin();
                         break;
                 case 2: 
                         BinManager.ConvertBTtoBK(BinManager.MainBin);
@@ -147,6 +148,7 @@ namespace BK2BT
                         BinManager.ConvertBKtoBT(BinManager.AlphaBin);
                         File.WriteAllBytes(saveBin.FileName, BinManager.AlphaBin.getCurrentBin());
                         ReloadMainBin();//BK was converted to BT, must convert back or renderer can't read it!
+                        if (BinManager.AlphaBin != null) ReloadAlphaBin();
                         break;
                     case 2:
                         BinManager.ConvertBTtoBK(BinManager.AlphaBin);
@@ -225,8 +227,7 @@ namespace BK2BT
             if (e.KeyCode == Keys.R && BinManager.MainBin != null)
             {
                 ReloadMainBin();
-                if (BinManager.AlphaBin == null) return;
-                ReloadAlphaBin();
+                if (BinManager.AlphaBin != null) ReloadAlphaBin();
             }
         }
 

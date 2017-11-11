@@ -21,6 +21,11 @@ public class BTBinFile
        this.CurrentBin = newBin;
     }
 
+    public Int32 getGeoAddr()
+    {
+        return ReadFourBytes(0x04);
+    }
+
     public Int32 getF3DEX2SetupAddr()
     {
         return ReadFourBytes(0x0C);
