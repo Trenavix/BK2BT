@@ -16,6 +16,7 @@ public class BinManager
 {
     public static BTBinFile MainBin;
     public static BTBinFile AlphaBin;
+    public static bool ReadytoLoad = true;
 
     public static void LoadBIN(String BinDirectory)
     {
@@ -40,6 +41,7 @@ public class BinManager
             AlphaBin = NewBTBin;
             fs.Close();
         }
+        Textures.InitialiseTextures(MainBin, 0);
         Textures.InitialiseTextures(AlphaBin, 1);
     }
 
@@ -60,17 +62,17 @@ public class BinManager
 
     public static void F3DEXtoF3DEX2(BTBinFile Bin)
     {
-        int CommandsLength = Bin.F3DCommandsLength();
-        Int32 F3DSetupAddr = Bin.ReadFourBytes(0x0C);
+        uint CommandsLength = Bin.F3DCommandsLength();
+        UInt32 F3DSetupAddr = Bin.ReadFourBytes(0x0C);
         byte[][] DisplayList = new byte[CommandsLength][];
-        int newCommandAddr = F3DSetupAddr+0x08;
+        uint newCommandAddr = F3DSetupAddr+0x08;
         //Copy DL into 2D Byte array with double loop 
         for (int i = 0; i < CommandsLength; i++)
         {
             DisplayList[i] = new byte[8];
             for (int j = 0; j < 8; j++)
             {
-                DisplayList[i][j] = Bin.getByte(newCommandAddr+(i*8)+j);
+                DisplayList[i][j] = Bin.getByte((uint)(newCommandAddr+(i*8)+j));
             }
         }
         //change or convert commands
@@ -203,7 +205,7 @@ public class BinManager
         {
             for (int j = 0; j < 8; j++)
             {
-                Bin.changeByte((newCommandAddr + (i * 8) + j), DisplayList[i][j]);
+                Bin.changeByte((uint)(newCommandAddr + (i * 8) + j), DisplayList[i][j]);
             }
         }
     }
@@ -223,17 +225,17 @@ public class BinManager
     public static void TextureHeaderBK2BT(BTBinFile Bin)
     {
         
-        Int16 SetupAddr = Bin.getTextureSetupAddr();
-        Bin.copyBytes(SetupAddr, 0x50, Bin.endBinAddr()-SetupAddr); //Shift bin file so TexSetup is at 0x50
+        UInt16 SetupAddr = Bin.getTextureSetupAddr();
+        Bin.copyBytes(SetupAddr, 0x50, Bin.getEndBinAddr()-SetupAddr); //Shift bin file so TexSetup is at 0x50
         Bin.WriteTwoBytes(0x08, 0x0050);
-        Int32 TriVertCount = Bin.ReadFourBytes(0x30); //Keep TriCount & VertCount
-        for (int i = 0; i < 4; i++) { Bin.WriteEightBytes(SetupAddr-8 + (i * 8), 0); } //fill ext texture addr with 0
+        UInt32 TriVertCount = Bin.ReadFourBytes(0x30); //Keep TriCount & VertCount
+        for (int i = 0; i < 4; i++) { Bin.WriteEightBytes((uint)(SetupAddr-8 + (i * 8)), 0); } //fill ext texture addr with 0
         Bin.WriteFourBytes(0x44, TriVertCount); //Place the Tri/Vert counts back in
         SetupAddr = Bin.getTextureSetupAddr();
-        if (Bin.getByte(SetupAddr+0x06) == 01) { return; } //External texture flag
-        Int16 numTextures = Bin.ReadTwoBytes(SetupAddr + 4);
-        int BKCommandBeginAddr = SetupAddr+8;
-        int BTCommandBeginAddr = SetupAddr + 8;
+        if (Bin.getByte((uint)SetupAddr+0x06) == 01) { return; } //External texture flag
+        UInt16 numTextures = Bin.ReadTwoBytes((uint)SetupAddr + 4);
+        uint BKCommandBeginAddr = (uint)SetupAddr+8;
+        uint BTCommandBeginAddr = (uint)SetupAddr + 8;
         for (int i = 0; i < numTextures; i++) //convert 128bit commands into 64bit commands
         {
             Bin.copyBytes(BKCommandBeginAddr, BTCommandBeginAddr, 6);//TexAddr & Type
@@ -241,16 +243,16 @@ public class BinManager
             BTCommandBeginAddr += 0x08;
             BKCommandBeginAddr += 0x10;
         }
-        Bin.copyBytes(BKCommandBeginAddr, BTCommandBeginAddr, Bin.endBinAddr()-BKCommandBeginAddr);//shift all data back
-        Bin.changeEndBinAddr(Bin.endBinAddr() - (numTextures * 8));//remove data at end after backshift
+        Bin.copyBytes(BKCommandBeginAddr, BTCommandBeginAddr, (uint)(Bin.getEndBinAddr()-BKCommandBeginAddr));//shift all data back
+        Bin.changeEndBinAddr((uint)(Bin.getEndBinAddr() - (numTextures * 8)));//remove data at end after backshift
         int AddressesShift = (0x18 - (numTextures * 8));
-        Int32 TexLoadBytes = Bin.ReadFourBytes(0x50)-(numTextures*8);
-        Int32 NewGeoAddr = Bin.ReadFourBytes(0x04) + AddressesShift;//declare new addresses after shift
-        Int32 NewF3DEX2Addr = Bin.ReadFourBytes(0x0C) + AddressesShift;
-        Int32 NewVertAddr = Bin.ReadFourBytes(0x10) + AddressesShift;
-        Int32 NewCollisionAddr = Bin.ReadFourBytes(0x1C) + AddressesShift;
-        Int32 NewFXSetupAddr = Bin.ReadFourBytes(0x24);
-        Int32 NewFXSetupEndAddr = Bin.ReadFourBytes(0x20);
+        UInt32 TexLoadBytes = (uint)(Bin.ReadFourBytes(0x50)-(numTextures*8));
+        UInt32 NewGeoAddr = (uint)(Bin.ReadFourBytes(0x04) + AddressesShift);//declare new addresses after shift
+        UInt32 NewF3DEX2Addr = (uint)(Bin.ReadFourBytes(0x0C) + AddressesShift);
+        UInt32 NewVertAddr = (uint)(Bin.ReadFourBytes(0x10) + AddressesShift);
+        UInt32 NewCollisionAddr = (uint)(Bin.ReadFourBytes(0x1C) + AddressesShift);
+        Int32 NewFXSetupAddr = (int)Bin.ReadFourBytes(0x24);
+        Int32 NewFXSetupEndAddr = (int)Bin.ReadFourBytes(0x20);
         if (NewFXSetupAddr != 0) NewFXSetupAddr += AddressesShift;
         if (NewFXSetupEndAddr != 0) NewFXSetupEndAddr += AddressesShift;
         Bin.WriteFourBytes(0x50, TexLoadBytes);
@@ -258,28 +260,28 @@ public class BinManager
         Bin.WriteFourBytes(0x0C, NewF3DEX2Addr);
         Bin.WriteFourBytes(0x10, NewVertAddr);
         Bin.WriteFourBytes(0x1C, NewCollisionAddr);
-        Bin.WriteFourBytes(0x20, NewFXSetupEndAddr);
-        Bin.WriteFourBytes(0x24, NewFXSetupAddr);
+        Bin.WriteFourBytes(0x20, (uint)NewFXSetupEndAddr);
+        Bin.WriteFourBytes(0x24, (uint)NewFXSetupAddr);
         //Bin.changeByte(0x0B, 0x00); THIS IS A TYPE, 2 for mipmapping may be necessary. 04 for env mapping. So far all match between BK/BT
     }
     public static void newGeoLayout(BTBinFile Bin)
     {
-        int GeoAddress = Bin.ReadFourBytes(0x04);
+        uint GeoAddress = Bin.ReadFourBytes(0x04);
         Bin.writeByteArray(GeoAddress, BTGeoLayout());
         Bin.changeEndBinAddr(GeoAddress+0x1C);
     }
     public static void useCommonVertexHeader(BTBinFile Bin)
     {
-        Int32 VertexSetupAddr = Bin.ReadFourBytes(0x10);
+        UInt32 VertexSetupAddr = Bin.ReadFourBytes(0x10);
         Bin.writeByteArray(VertexSetupAddr, BTVertexHeader(Bin));
     }
 
     public static void updateCollision(BTBinFile Bin)
     {
         //TODO
-        int CollisionAddr = Bin.getCollisionSetupAddr();
-        int CollisionSize = Bin.getGeoAddr() - CollisionAddr;
-        for (int i = CollisionAddr; i < CollisionAddr + CollisionSize; i += 4)
+        uint CollisionAddr = Bin.getCollisionSetupAddr();
+        uint CollisionSize = Bin.getGeoAddr() - CollisionAddr;
+        for (uint i = CollisionAddr; i < CollisionAddr + CollisionSize; i += 4)
         {
             if (Bin.getByte(i) == 0x88) Bin.changeByte(i, 0x41);//Update common group header with one that allows HQ Shadow and ambient lighting
         }
@@ -345,8 +347,8 @@ public class BinManager
 
     public static byte[] BTVertexHeader(BTBinFile Bin)
     {
-        int VertexStartAddr = Bin.ReadFourBytes(0x10) + 0x18;
-        Int16 numVerts = ((Int16)((Bin.ReadFourBytes(0x1C) - VertexStartAddr)/0x10));
+        uint VertexStartAddr = Bin.ReadFourBytes(0x10) + 0x18;
+        UInt16 numVerts = ((UInt16)((Bin.ReadFourBytes(0x1C) - VertexStartAddr)/0x10));
         byte numVertsByte1;
         byte numVertsByte2;
         FromShortToByte(numVerts, out numVertsByte1, out numVertsByte2);
@@ -359,9 +361,23 @@ public class BinManager
         geolayout[0x14] = 0xA0; geolayout[0x15] = 0xC0; geolayout[0x16] = numVertsByte1; geolayout[0x17] = numVertsByte2;
         return geolayout;
     }
-    public static void FromShortToByte(short number, out byte byte1, out byte byte2)
+
+    public static void SetVertRGBA(BTBinFile BTBin, uint Addr, UInt32 colour, bool AlphaOnly)
+    {
+        byte alpha = (byte)(colour & 0xFF);
+        if (AlphaOnly) BTBin.changeByte(Addr + 15, alpha);
+        else BTBin.WriteFourBytes(Addr + 12, colour);
+    }
+
+    public static void FromShortToByte(ushort number, out byte byte1, out byte byte2)
     {
         byte1 = (byte)(number >> 8);
         byte2 = (byte)(number & 255);
+    }
+
+    public static (BTBinFile, uint) AttainCorrectBin(UInt32 Addr)
+    {
+        if (Addr > 0x80000000) return (AlphaBin, (Addr - 0x80000000));
+        else return (MainBin, Addr);
     }
 }

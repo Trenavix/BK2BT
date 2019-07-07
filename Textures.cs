@@ -22,8 +22,8 @@ using System.IO;
 public class Textures
 {
     public static bool[] FirstTexLoad = new bool[2];
-    public static int[][] TextureArray = new int[2][]; // Two Binfiles (Main+Alpha)
-    public static int[][] TextureAddrArray = new int[2][];
+    public static uint[][] TextureArray = new uint[2][]; // Two Binfiles (Main+Alpha)
+    public static uint[][] TextureAddrArray = new uint[2][];
     public static readonly byte RGBAMODE = 0;
     public static readonly byte YUVMODE = 1;
     public static readonly byte CIMODE = 2;
@@ -33,7 +33,7 @@ public class Textures
     public static byte BitSize = 0;
     public static bool MipMapping = false;
 
-    public static int currentTexAddr = 0;
+    public static uint currentTexAddr = 0;
 
     public static short[] currentPalette = new short[0]; //Init with size or error!
     public static int ShortstoLoad = 0;
@@ -48,7 +48,7 @@ public class Textures
 
     public static int LoadTexture(BTBinFile Bin)
     {
-        int CICount = currentPalette.Length;
+        uint CICount = (uint)currentPalette.Length;
         int NewTexture = 0;
         if (MODE == CIMODE) { NewTexture = LoadCITexture(Bin); }
         else if (MODE == RGBAMODE && BitSize == 16) { NewTexture = LoadRGBA16Texture(Bin); }
@@ -61,17 +61,17 @@ public class Textures
     {
         int id = GL.GenTexture();
         GL.BindTexture(TextureTarget.Texture2D, id);
-        int TextureDataAddr = Binfile.getTextureDataAddr();
+        uint TextureDataAddr = Binfile.getTextureDataAddr();
         byte[] CITex;
         short[] NewTexture;
         if (currentPalette.Length <= 16)
         {
-            CITex = Binfile.copyBytestoArray(TextureDataAddr + currentTexAddr, Width*Height/2);//4bpp
+            CITex = Binfile.copyBytestoArray(TextureDataAddr + currentTexAddr, (uint)(Width*Height/2));//4bpp
             NewTexture = CI4ToRGB5A1(CITex, currentPalette);
         }
         else
         {
-            CITex = Binfile.copyBytestoArray(TextureDataAddr + currentTexAddr, Width*Height);//8bpp
+            CITex = Binfile.copyBytestoArray(TextureDataAddr + currentTexAddr, (uint)(Width*Height));//8bpp
             NewTexture = CI8ToRGB5A1(CITex, currentPalette);
         }
         GL.TexImage2D
@@ -95,7 +95,7 @@ public class Textures
     {
         int id = GL.GenTexture();
         GL.BindTexture(TextureTarget.Texture2D, id);
-        int TextureDataAddr = Binfile.getTextureDataAddr();
+        uint TextureDataAddr = Binfile.getTextureDataAddr();
         short[] TexData = LoadRGBA16TextureData(Width*Height, Binfile);
         GL.TexImage2D
             (
@@ -118,9 +118,9 @@ public class Textures
     {
         int id = GL.GenTexture();
         GL.BindTexture(TextureTarget.Texture2D, id);
-        int TexDataAddr = Binfile.getTextureDataAddr();
-        Int32[] TexData = new Int32[ShortstoLoad]; //actually FloatsToLoad but accounted for as Shorts
-        for (int i = 0; i < ShortstoLoad; i++)
+        uint TexDataAddr = Binfile.getTextureDataAddr();
+        UInt32[] TexData = new UInt32[ShortstoLoad]; //actually FloatsToLoad but accounted for as Shorts
+        for (uint i = 0; i < ShortstoLoad; i++)
         {
             TexData[i] = Binfile.ReadFourBytes(TexDataAddr + currentTexAddr + (i * 4));
         }
@@ -145,8 +145,8 @@ public class Textures
     {
         int id = GL.GenTexture();
         GL.BindTexture(TextureTarget.Texture2D, id);
-        int TextureDataAddr = Binfile.getTextureDataAddr();
-        byte[] TexData = Binfile.copyBytestoArray(TextureDataAddr + currentTexAddr, Width*Height);
+        uint TextureDataAddr = Binfile.getTextureDataAddr();
+        byte[] TexData = Binfile.copyBytestoArray(TextureDataAddr + currentTexAddr, (uint)(Width*Height));
 
         GL.TexImage2D
             (
@@ -199,11 +199,11 @@ public class Textures
 
     public static short[] LoadRGBA16TextureData(int ShortsToLoad, BTBinFile Binfile)
     {
-        int TexDataAddr = Binfile.getTextureDataAddr();
+        uint TexDataAddr = Binfile.getTextureDataAddr();
         short[] data = new short[ShortsToLoad];
-        for (int i = 0; i < ShortsToLoad; i++)
+        for (uint i = 0; i < ShortsToLoad; i++)
         {
-            data[i] = Binfile.ReadTwoBytes(TexDataAddr + currentTexAddr + (i * 2));
+            data[i] = (short)Binfile.ReadTwoBytes(TexDataAddr + currentTexAddr + (uint)(i * 2));
         }
         return data;
     }
@@ -233,7 +233,7 @@ public class Textures
 
     public static void InitialiseTextures(BTBinFile Bin, int BinNum)
     {
-        TextureArray[BinNum] = new int[Bin.getTextureCount()];
+        TextureArray[BinNum] = new uint[Bin.getTextureCount()];
         FirstTexLoad[BinNum] = true;
     }
 }

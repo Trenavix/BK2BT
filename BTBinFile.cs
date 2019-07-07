@@ -21,49 +21,49 @@ public class BTBinFile
        this.CurrentBin = newBin;
     }
 
-    public Int32 getGeoAddr()
+    public UInt32 getGeoAddr()
     {
         return ReadFourBytes(0x04);
     }
 
-    public Int32 getF3DEX2SetupAddr()
+    public UInt32 getF3DEX2SetupAddr()
     {
         return ReadFourBytes(0x0C);
     }
-    public Int32 getDLAddr()
+    public UInt32 getDLAddr()
     {
         return ReadFourBytes(0x0C)+0x08;
     }
 
-    public void updateF3DEX2SetupAddr(Int32 newAddr)
+    public void updateF3DEX2SetupAddr(UInt32 newAddr)
     {
         WriteFourBytes(getF3DEX2SetupAddr(), newAddr);
     }
-    public Int16 getTextureSetupAddr()
+    public UInt16 getTextureSetupAddr()
     {
         return ReadTwoBytes(0x08);
     }
-    public Int16 getTextureCount()
+    public UInt16 getTextureCount()
     {
-        return ReadTwoBytes(getTextureSetupAddr()+0x04);
+        return ReadTwoBytes((uint)(getTextureSetupAddr()+0x04));
     }
-    public int getTextureDataAddr()
+    public uint getTextureDataAddr()
     {
-        return getTextureSetupAddr() + 0x8+(getTextureCount() * 0x10);
+        return (uint)(getTextureSetupAddr() + 0x8+(getTextureCount() * 0x10));
     }
 
 
-    public Int32 getVTXSetupAddr()
+    public UInt32 getVTXSetupAddr()
     {
         return ReadFourBytes(0x10);
     }
-    public Int32 getCollisionSetupAddr()
+    public UInt32 getCollisionSetupAddr()
     {
         return ReadFourBytes(0x1C);
     }
-    public Int16 getVertexCount()
+    public UInt16 getVertexCount()
     {
-        return (Int16)((getCollisionSetupAddr() - (getVTXSetupAddr() + 0x18))/0x10);
+        return (UInt16)((getCollisionSetupAddr() - (getVTXSetupAddr() + 0x18))/0x10);
     }
 
     public byte[][] getVTXArray()
@@ -74,18 +74,18 @@ public class BTBinFile
             array[i] = new byte[16];
             for (int j = 0; j < 16; j++)
             {
-                array[i][j] = getByte(getVTXSetupAddr() + 0x18+(0x10*i)+j);
+                array[i][j] = getByte((uint)(getVTXSetupAddr() + 0x18+(0x10*i)+j));
             }
         }
         return array;
     }
 
-    public Int32 getVTXAddr()
+    public UInt32 getVTXAddr()
     {
         return ReadFourBytes(0x10)+0x18;
     }
 
-    public int F3DCommandsLength()
+    public uint F3DCommandsLength()
     {
         return ReadFourBytes(getF3DEX2SetupAddr());
     }
@@ -104,92 +104,106 @@ public class BTBinFile
         return CurrentBin;
     }
 
-    public int endBinAddr()
+    public uint getEndBinAddr()
     {
-        return CurrentBin.Length-1;
+        return (uint)(CurrentBin.Length-1);
     }
 
-    public Int16 ReadTwoBytes(int offset)
+    public UInt16 ReadTwoBytes(uint offset)
     {
-        Int16 value = getByte(offset);
-        for (int i = offset; i < offset+2; i++)
+        UInt16 value = getByte(offset);
+        for (uint i = offset; i < offset + 2; i++)
         {
-            value = (Int16)((value << 8) | CurrentBin[i]);
+            value = (UInt16)((value << 8) | CurrentBin[i]);
         }
         return value;
     }
-    public Int16 ReadTwoSignedBytes(int offset)
+    public UInt16 ReadTwoSignedBytes(uint offset)
     {
-        return (Int16)((getByte(offset + 1) << 8) | getByte(offset));
+        return (UInt16)((getByte(offset + 1) << 8) | getByte(offset));
     }
-    public Int32 ReadFourBytes(int offset)
+    public UInt32 ReadFourBytes(uint offset)
     {
-        Int32 value = getByte(offset);
-        for (int i = offset; i < offset + 4; i++)
+        UInt32 value = getByte(offset);
+        for (uint i = offset; i < offset + 4; i++)
         {
             value = (value << 8) | CurrentBin[i];
         }
         return value;
     }
 
-    public Int64 ReadEightBytes(int offset)
+    public UInt64 ReadEightBytes(uint offset)
     {
-        Int64 value = getByte(offset);
-        for (int i = offset; i < offset+8; i++)
+        UInt64 value = getByte(offset);
+        for (uint i = offset; i < offset + 8; i++)
         {
             value = (value << 8) | CurrentBin[i];
         }
         return value;
     }
-    public void WriteFourBytes(int offset, Int32 bytes)
+    public void WriteFourBytes(uint offset, UInt32 bytes)
     {
         byte[] currentbyte = BitConverter.GetBytes(bytes);
-        for (int i = offset; i > offset - 4; i--)
+        for (uint i = offset; i > offset - 4; i--)
         {
             CurrentBin[i + 3] = currentbyte[offset - i];
         }
     }
-    public void WriteTwoBytes(int offset, Int16 bytes)
+    public void WriteTwoBytes(uint offset, UInt16 bytes)
     {
         byte[] currentbyte = BitConverter.GetBytes(bytes);
-        for (int i = offset; i > offset - 2; i--)
+        for (uint i = offset; i > offset - 2; i--)
         {
-            CurrentBin[i+1] = currentbyte[offset-i];
+            CurrentBin[i + 1] = currentbyte[offset - i];
         }
     }
-    public void WriteEightBytes(int offset, Int64 bytes)
+    public void WriteEightBytes(uint offset, UInt64 bytes)
     {
         byte[] currentbyte = BitConverter.GetBytes(bytes);
-        for (int i = offset; i < offset + 8; i++)
+        for (uint i = offset; i > offset - 8; i--)
         {
-            CurrentBin[i] = currentbyte[i-offset];
+            CurrentBin[i + 7] = currentbyte[offset - i];
         }
     }
-    public byte getByte(int offset)
+    public byte getByte(uint offset)
     {
         return CurrentBin[offset];
     }
-    public void changeByte(int offset, byte newbyte)
+    public void changeByte(uint offset, byte newbyte)
     {
-        if (offset > endBinAddr())
+        if (offset > getEndBinAddr())
         {
-            Array.Resize(ref CurrentBin, offset+1);
+            Array.Resize(ref CurrentBin, (int)offset + 1);
         }
         CurrentBin[offset] = newbyte;
     }
-    public void copyBytes(int srcAddr, int destAddr, int size)
+    public void copyBytes(uint srcAddr, uint destAddr, uint size)
     {
         byte[] tempbuffer = new byte[size];
-        for (int i = 0; i < size; i++)
+        for (uint i = 0; i < size; i++)
         {
-            tempbuffer[i] = CurrentBin[srcAddr+i];
+            tempbuffer[i] = CurrentBin[srcAddr + i];
         }
-        for (int i = 0; i < size; i++)
+        for (uint i = 0; i < size; i++)
         {
-            changeByte(destAddr+i, tempbuffer[i]);
+            changeByte(destAddr + i, tempbuffer[i]);
         }
     }
-    public byte[] copyBytestoArray(int srcAddr, int size)
+    public void cutBytes(uint srcAddr, uint destAddr, uint size)
+    {
+        byte[] tempbuffer = new byte[size];
+        for (uint i = 0; i < size; i++)
+        {
+            tempbuffer[i] = CurrentBin[srcAddr + i];
+        }
+        copyBytes(srcAddr, srcAddr - size, getEndBinAddr() - srcAddr); //Copybytes backward to "cut"
+        copyBytes(destAddr, destAddr + size, getEndBinAddr() - size - destAddr);
+        for (uint i = 0; i < size; i++)
+        {
+            changeByte(destAddr + i, tempbuffer[i]);
+        }
+    }
+    public byte[] copyBytestoArray(uint srcAddr, uint size)
     {
         byte[] newarray = new byte[size];
         for (int i = 0; i < size; i++)
@@ -198,15 +212,15 @@ public class BTBinFile
         }
         return newarray;
     }
-    public void writeByteArray(int offset, byte[] array)
+    public void writeByteArray(uint offset, byte[] array)
     {
-        for (int i=0; i < array.Length; i++)
+        for (uint i = 0; i < array.Length; i++)
         {
-            changeByte(offset+i, array[i]);
+            changeByte(offset + i, array[i]);
         }
     }
-    public void changeEndBinAddr(int newsize)
+    public void changeEndBinAddr(uint newsize)
     {
-        Array.Resize(ref CurrentBin, newsize);
+        Array.Resize(ref CurrentBin, (int)newsize);
     }
 }
