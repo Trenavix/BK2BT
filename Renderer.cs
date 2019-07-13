@@ -57,7 +57,13 @@ class Renderer
         TriCount = 0;
         VertexCount = 0;
         GL.Viewport(ClientRectangle.X, ClientRectangle.Y, RenderPanel.Width, RenderPanel.Height);
-        projection = cam.GetViewMatrix() * Matrix4.CreatePerspectiveFieldOfView(1.0f, Width / (float)Height, 0.00000001f, 0.001f);
+        float aspectRatio = Width / (float)Height;
+        float aspectRatioY = 1.0f;
+        if (aspectRatio < aspectRatioY)
+        {
+            aspectRatioY = aspectRatioY / aspectRatio;
+        }
+        projection = cam.GetViewMatrix() * Matrix4.CreatePerspectiveFieldOfView(2.0f * (float)Math.Atan((float)Math.Tan(1.0f / 2.0f) / aspectRatioY), aspectRatio, 0.00000001f, 0.001f);
         GL.MatrixMode(MatrixMode.Projection);
         GL.LoadMatrix(ref projection);
         InitialiseView();
@@ -115,7 +121,13 @@ class Renderer
     public static void RenderColourBuffer(Rectangle ClientRectangle, int Width, int Height, GLControl RenderPanel)
     {
         GL.Viewport(ClientRectangle.X, ClientRectangle.Y, RenderPanel.Width, RenderPanel.Height);
-        projection = cam.GetViewMatrix() * Matrix4.CreatePerspectiveFieldOfView(1.0f, Width / (float)Height, 0.00000001f, 0.001f);
+        float aspectRatio = Width / (float)Height;
+        float aspectRatioY = 1.0f;
+        if (aspectRatio < aspectRatioY)
+        {
+            aspectRatioY = aspectRatioY / aspectRatio;
+        }
+        projection = cam.GetViewMatrix() * Matrix4.CreatePerspectiveFieldOfView(2.0f * (float)Math.Atan((float)Math.Tan(1.0f / 2.0f) / aspectRatioY), aspectRatio, 0.00000001f, 0.001f);
         GL.MatrixMode(MatrixMode.Projection);
         GL.LoadMatrix(ref projection);
         InitialiseView();
